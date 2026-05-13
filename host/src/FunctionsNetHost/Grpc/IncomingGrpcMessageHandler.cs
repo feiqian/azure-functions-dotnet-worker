@@ -68,11 +68,16 @@ namespace FunctionsNetHost.Grpc
                     var envReloadRequest = msg.FunctionEnvironmentReloadRequest;
 
                     // Set working directory to the function app's content root before loading the app.
-                    // During placeholder reuse, the worker process was started with a standby working
-                    // directory (/tmp/functions/standby/wwwroot). The reload request provides the real
-                    // content path (/home/site/wwwroot) which must be set before the app loads,
+                    // During placeholder reuse on Legion, the worker process was started with a standby
+                    // working directory (/tmp/functions/standby/wwwroot). The reload request provides the
+                    // real content path (/home/site/wwwroot) which must be set before the app loads,
                     // otherwise config files loaded via relative paths will fail.
-                    if (!string.IsNullOrEmpty(envReloadRequest.FunctionAppDirectory)
+                    // Scoped to Dynamic SKU on Legion to limit blast radius.
+                    var websiteSku = Environment.GetEnvironmentVariable("WEBSITE_SKU");
+                    var legionHost = Environment.GetEnvironmentVariable("LEGION_SERVICE_HOST");
+                    if (string.Equals(websiteSku, "Dynamic", StringComparison.OrdinalIgnoreCase)
+                        && !string.IsNullOrEmpty(legionHost)
+                        && !string.IsNullOrEmpty(envReloadRequest.FunctionAppDirectory)
                         && Directory.Exists(envReloadRequest.FunctionAppDirectory))
                     {
                         Directory.SetCurrentDirectory(envReloadRequest.FunctionAppDirectory);
